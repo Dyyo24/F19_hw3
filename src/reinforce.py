@@ -73,10 +73,10 @@ class Reinforce(object):
             act_probs = self.model.predict(state.reshape(1,-1)).squeeze() # evaluate policy
             act = np.random.choice(np.arange(act_probs.shape[0]), p = act_probs)
             next_state,r,done,_ = env.step(act)
-            state = next_state.copy()
-            states.append(next_state)
+            states.append(state)
             actions.append(act)
             rewards.append(r)
+            state = next_state.copy()
         return states, actions, rewards
     
     def test(self,env,gamma = 1):
@@ -147,22 +147,18 @@ def main(args):
     model.add(Dense(16,kernel_initializer=initializers.VarianceScaling(scale=1.0,mode='fan_avg',distribution='uniform'),bias_initializer='zeros',activation='relu'))
     model.add(Dense(4,kernel_initializer=initializers.VarianceScaling(scale=1.0,mode='fan_avg',distribution='uniform'),bias_initializer='zeros', activation='softmax'))
     
-    
-    
-    
-    
     # TODO: Train the model using REINFORCE and plot the learning curve.
     reinforce_model = Reinforce(model)
+    episode = 0
     r = 0
-    iteration = 0
     while r < 200:
         reinforce_model.train(env)
-        iteration += 1
+        episode += 1
         if iteration % 200 == 0:
             r = reinforce_model.test(env)
             print('------------------------')
+            print('Episode: ',episode)
             print('Reward: ',r)
-            print('Iteration: ',iteration)
 
 # train on batches, or do normalization of reward
         
