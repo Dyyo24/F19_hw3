@@ -136,10 +136,19 @@ def main(args):
     
     
     model = Sequential()       # the model that is trained for Q value estimator (Q hat)
-    model.add(Dense(16,kernel_initializer=initializers.VarianceScaling(scale=1.0,mode='fan_avg',distribution='uniform'),bias_initializer='zeros', activation='relu', input_shape=(in_shape,)))  # input: state and action
-#    model.add(Dense(16,kernel_initializer=initializers.VarianceScaling(scale=1.0,mode='fan_avg',distribution='uniform'),bias_initializer='zeros',activation='relu'))
-    model.add(Dense(16,kernel_initializer=initializers.VarianceScaling(scale=1.0,mode='fan_avg',distribution='uniform'),bias_initializer='zeros',activation='relu'))
-    model.add(Dense(4,kernel_initializer=initializers.VarianceScaling(scale=1.0,mode='fan_avg',distribution='uniform'),bias_initializer='zeros', activation='softmax'))
+    model.add(Dense(16,kernel_initializer=initializers.VarianceScaling(scale=1.0,mode='fan_avg',distribution='uniform'),
+                    bias_initializer='zeros', 
+                    activation='relu', 
+                    input_shape=(in_shape,)))  # input: state and action
+#    model.add(Dense(16,kernel_initializer=initializers.VarianceScaling(scale=1.0,mode='fan_avg',distribution='uniform'),
+#                    bias_initializer='zeros',
+#                    activation='relu'))
+    model.add(Dense(16,kernel_initializer=initializers.VarianceScaling(scale=1.0,mode='fan_avg',distribution='uniform'),
+                    bias_initializer='zeros',
+                    activation='relu'))
+    model.add(Dense(4,kernel_initializer=initializers.VarianceScaling(scale=1.0,mode='fan_avg',distribution='uniform'),
+                    bias_initializer='zeros', 
+                    activation='softmax'))
     
     # TODO: Train the model using REINFORCE and plot the learning curve.
     reinforce_model = Reinforce(model)
