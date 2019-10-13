@@ -26,7 +26,7 @@ class Reinforce(object):
         #       your variables, or alternately compile your model here.
 
 
-    def train(self, env, gamma=1.0):
+    def train(self, env, gamma=0.99):
         # Trains the model on a single episode using REINFORCE.
         # TODO: Implement this method. It may be helpful to call the class
         #       method generate_episode() to generate training data.
@@ -128,45 +128,45 @@ def parse_arguments():
 
 
         
-#def main(args):
+def main(args):
     # Parse command-line arguments.
-#    args = parse_arguments()
-#    num_episodes = args.num_episodes
-#    lr = args.lr
-#    render = args.render
+    args = parse_arguments()
+    num_episodes = args.num_episodes
+    lr = args.lr
+    render = args.render
     
     # Create the environment.
-env = gym.make('LunarLander-v2')
-# TODO: Create the model.
-in_shape = env.observation_space.shape[0]
-
-
-model = Sequential()       # the model that is trained for Q value estimator (Q hat)
-model.add(Dense(16,kernel_initializer=initializers.VarianceScaling(scale=1.0,mode='fan_avg',distribution='uniform'),bias_initializer='zeros', activation='relu', input_shape=(in_shape,)))  # input: state and action
-model.add(Dense(16,kernel_initializer=initializers.VarianceScaling(scale=1.0,mode='fan_avg',distribution='uniform'),bias_initializer='zeros',activation='relu'))
-model.add(Dense(16,kernel_initializer=initializers.VarianceScaling(scale=1.0,mode='fan_avg',distribution='uniform'),bias_initializer='zeros',activation='relu'))
-model.add(Dense(4,kernel_initializer=initializers.VarianceScaling(scale=1.0,mode='fan_avg',distribution='uniform'),bias_initializer='zeros', activation='softmax'))
-
-
-
-
-
-# TODO: Train the model using REINFORCE and plot the learning curve.
-reinforce_model = Reinforce(model)
-r = 0
-iteration = 0
-while r < 200:
-    reinforce_model.train(env)
-    iteration += 1
-    if iteration % 200 == 0:
-        r = reinforce_model.test(env)
-        print('------------------------')
-        print('Reward: ',r)
-        print('Iteration: ',iteration)
+    env = gym.make('LunarLander-v2')
+    # TODO: Create the model.
+    in_shape = env.observation_space.shape[0]
+    
+    
+    model = Sequential()       # the model that is trained for Q value estimator (Q hat)
+    model.add(Dense(16,kernel_initializer=initializers.VarianceScaling(scale=1.0,mode='fan_avg',distribution='uniform'),bias_initializer='zeros', activation='relu', input_shape=(in_shape,)))  # input: state and action
+    model.add(Dense(16,kernel_initializer=initializers.VarianceScaling(scale=1.0,mode='fan_avg',distribution='uniform'),bias_initializer='zeros',activation='relu'))
+    model.add(Dense(16,kernel_initializer=initializers.VarianceScaling(scale=1.0,mode='fan_avg',distribution='uniform'),bias_initializer='zeros',activation='relu'))
+    model.add(Dense(4,kernel_initializer=initializers.VarianceScaling(scale=1.0,mode='fan_avg',distribution='uniform'),bias_initializer='zeros', activation='softmax'))
+    
+    
+    
+    
+    
+    # TODO: Train the model using REINFORCE and plot the learning curve.
+    reinforce_model = Reinforce(model)
+    r = 0
+    iteration = 0
+    while r < 200:
+        reinforce_model.train(env)
+        iteration += 1
+        if iteration % 200 == 0:
+            r = reinforce_model.test(env)
+            print('------------------------')
+            print('Reward: ',r)
+            print('Iteration: ',iteration)
 
 # train on batches, or do normalization of reward
         
         
 
-#if __name__ == '__main__':
-#    main(sys.argv)
+if __name__ == '__main__':
+    main(sys.argv)
