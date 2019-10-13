@@ -77,7 +77,18 @@ def main(args):
     env = gym.make('LunarLander-v2')
 
     # TODO: Create the model.
+    actor = Sequential()       # REINFORCE model as the actor
+    actor.add(Dense(16,kernel_initializer=initializers.VarianceScaling(scale=1.0,mode='fan_avg',distribution='uniform'),bias_initializer='zeros', activation='relu', input_shape=(in_shape,)))  # input: state and action
+    actor.add(Dense(16,kernel_initializer=initializers.VarianceScaling(scale=1.0,mode='fan_avg',distribution='uniform'),bias_initializer='zeros',activation='relu'))
+    actor.add(Dense(16,kernel_initializer=initializers.VarianceScaling(scale=1.0,mode='fan_avg',distribution='uniform'),bias_initializer='zeros',activation='relu'))
+    actor.add(Dense(4,kernel_initializer=initializers.VarianceScaling(scale=1.0,mode='fan_avg',distribution='uniform'),bias_initializer='zeros', activation='softmax'))
 
+
+    critic = Sequential()       # The critic, output should be the value of the state
+    critic.add(Dense(16,kernel_initializer=initializers.VarianceScaling(scale=1.0,mode='fan_avg',distribution='uniform'),bias_initializer='zeros', activation='relu', input_shape=(in_shape,)))  # input: state and action
+    critic.add(Dense(16,kernel_initializer=initializers.VarianceScaling(scale=1.0,mode='fan_avg',distribution='uniform'),bias_initializer='zeros',activation='relu'))
+    critic.add(Dense(16,kernel_initializer=initializers.VarianceScaling(scale=1.0,mode='fan_avg',distribution='uniform'),bias_initializer='zeros',activation='relu'))
+    critic.add(Dense(1,kernel_initializer=initializers.VarianceScaling(scale=1.0,mode='fan_avg',distribution='uniform'),bias_initializer='zeros', activation='softmax'))
     # TODO: Train the model using A2C and plot the learning curves.
 
 
