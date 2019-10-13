@@ -36,8 +36,8 @@ class Reinforce(object):
         n = len(states)
         G = []
         
-        r = np.array(rewards)
-        G = np.zeros_like(r)
+        r = np.array(rewards) # (T,1)
+        G = np.zeros_like(r) # (T,1)
         G[-1] = r[-1]
         for i in range(n-2,-1,-1):
             G[i] = G[i+1]*gamma + r[i]
@@ -50,7 +50,7 @@ class Reinforce(object):
         Ghot = np.zeros((n,in_shape))
  #      print('hot vector shape: ',Ghot.shape)
         for i in range(n):
-            Ghot[i,actions[i]] *= G[i]
+            Ghot[i,actions[i]] += G[i]
             
     #    print('G',np.array(G).shape)
    #     print('states',np.array(states).shape)              
