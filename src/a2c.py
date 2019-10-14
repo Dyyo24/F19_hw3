@@ -17,7 +17,7 @@ class A2C(Reinforce):
     # This class inherits the Reinforce class, so for example, you can reuse
     # generate_episode() here.
 
-    def __init__(self, model, lr, critic_model, critic_lr, n=20):
+    def __init__(self, model, critic_model, lr=0.001, critic_lr=0.001, n=20):
         # Initializes A2C.
         # Args:
         # - model: The actor model.
@@ -36,6 +36,17 @@ class A2C(Reinforce):
         # Trains the model on a single episode using A2C.
         # TODO: Implement this method. It may be helpful to call the class
         #       method generate_episode() to generate training data.
+        states, actions, rewards = self.generate_episode(env)
+        print(states.shape)
+        r = np.array(rewards)
+        V = np.zeros_like(r)
+        T = len(states)
+        for i in range(T-2,-1,-1):
+            if i+self.n >= T:
+                V[-1] = 0
+            else:
+                V[i+self.n] = self.critic_model.predict(states.reshape(1,-1)).squeeze()
+                
         return
 
 
@@ -64,33 +75,38 @@ def parse_arguments():
     return parser.parse_args()
 
 
-def main(args):
-    # Parse command-line arguments.
-    args = parse_arguments()
-    num_episodes = args.num_episodes
-    lr = args.lr
-    critic_lr = args.critic_lr
-    n = args.n
-    render = args.render
+# =============================================================================
+# def main(args):
+#     # Parse command-line arguments.
+#     args = parse_arguments()
+#     num_episodes = args.num_episodes
+#     lr = args.lr
+#     critic_lr = args.critic_lr
+#     n = args.n
+#     render = args.render
+# =============================================================================
 
     # Create the environment.
-    env = gym.make('LunarLander-v2')
+env = gym.make('LunarLander-v2')
 
     # TODO: Create the model.
-    actor = Sequential()       # REINFORCE model as the actor
-    actor.add(Dense(16,kernel_initializer=initializers.VarianceScaling(scale=1.0,mode='fan_avg',distribution='uniform'),bias_initializer='zeros', activation='relu', input_shape=(in_shape,)))  # input: state and action
-    actor.add(Dense(16,kernel_initializer=initializers.VarianceScaling(scale=1.0,mode='fan_avg',distribution='uniform'),bias_initializer='zeros',activation='relu'))
-    actor.add(Dense(16,kernel_initializer=initializers.VarianceScaling(scale=1.0,mode='fan_avg',distribution='uniform'),bias_initializer='zeros',activation='relu'))
-    actor.add(Dense(4,kernel_initializer=initializers.VarianceScaling(scale=1.0,mode='fan_avg',distribution='uniform'),bias_initializer='zeros', activation='softmax'))
+in_shape = env.observation_space.shape[0]
+actor = Sequential()       # REINFORCE model as the actor
+actor.add(Dense(16,kernel_initializer=initializers.VarianceScaling(scale=1.0,mode='fan_avg',distribution='uniform'),bias_initializer='zeros', activation='relu', input_shape=(in_shape,)))  # input: state and action
+actor.add(Dense(16,kernel_initializer=initializers.VarianceScaling(scale=1.0,mode='fan_avg',distribution='uniform'),bias_initializer='zeros',activation='relu'))
+actor.add(Dense(16,kernel_initializer=initializers.VarianceScaling(scale=1.0,mode='fan_avg',distribution='uniform'),bias_initializer='zeros',activation='relu'))
+actor.add(Dense(4,kernel_initializer=initializers.VarianceScaling(scale=1.0,mode='fan_avg',distribution='uniform'),bias_initializer='zeros', activation='softmax'))
 
-
-    critic = Sequential()       # The critic, output should be the value of the state
-    critic.add(Dense(16,kernel_initializer=initializers.VarianceScaling(scale=1.0,mode='fan_avg',distribution='uniform'),bias_initializer='zeros', activation='relu', input_shape=(in_shape,)))  # input: state and action
-    critic.add(Dense(16,kernel_initializer=initializers.VarianceScaling(scale=1.0,mode='fan_avg',distribution='uniform'),bias_initializer='zeros',activation='relu'))
-    critic.add(Dense(16,kernel_initializer=initializers.VarianceScaling(scale=1.0,mode='fan_avg',distribution='uniform'),bias_initializer='zeros',activation='relu'))
-    critic.add(Dense(1,kernel_initializer=initializers.VarianceScaling(scale=1.0,mode='fan_avg',distribution='uniform'),bias_initializer='zeros', activation='softmax'))
+critic = Sequential()       # The critic, output should be the value of the state
+critic.add(Dense(16,kernel_initializer=initializers.VarianceScaling(scale=1.0,mode='fan_avg',distribution='uniform'),bias_initializer='zeros', activation='relu', input_shape=(in_shape,)))  # input: state and action
+critic.add(Dense(16,kernel_initializer=initializers.VarianceScaling(scale=1.0,mode='fan_avg',distribution='uniform'),bias_initializer='zeros',activation='relu'))
+critic.add(Dense(16,kernel_initializer=initializers.VarianceScaling(scale=1.0,mode='fan_avg',distribution='uniform'),bias_initializer='zeros',activation='relu'))
+critic.add(Dense(1,kernel_initializer=initializers.VarianceScaling(scale=1.0,mode='fan_avg',distribution='uniform'),bias_initializer='zeros', activation='softmax'))
     # TODO: Train the model using A2C and plot the learning curves.
+a2c = A2C(actor,critic)
+a2c.train(env)
 
-
-if __name__ == '__main__':
-    main(sys.argv)
+# =============================================================================
+# if __name__ == '__main__':
+#     main(sys.argv)
+# =============================================================================
