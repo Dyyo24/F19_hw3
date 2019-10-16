@@ -8,6 +8,12 @@ from keras import initializers
 from keras import losses
 from keras import Sequential
 from keras.layers import Dense
+# =============================================================================
+# from numpy.random import set_random_seed
+# seed(1)
+# from tensorflow import set_random_seed
+# set_random_seed(2)
+# =============================================================================
 
 #import torch
 #import torch.nn as nn
@@ -48,7 +54,7 @@ class Reinforce(object):
         in_shape = env.action_space.n
         Ghot = np.zeros((T,in_shape))
         for i in range(T):
-            Ghot[i,actions[i]] += G[i]/T
+            Ghot[i,actions[i]] = G[i]
                 
         self.model.fit(np.array(states),Ghot,verbose = 0)
 
@@ -89,7 +95,7 @@ class Reinforce(object):
                 act_probs = self.model.predict(state.reshape(1,-1)).squeeze() # evaluate policy
                 act = np.argmax(act_probs)
                 
-                next_state,r,done,_ = env.step(act)
+                state,r,done,_ = env.step(act)
                 r_episode += r
             
             reward.append(r_episode)
@@ -131,6 +137,9 @@ def main(args):
     
     # Create the environment.
     env = gym.make('LunarLander-v2')
+# =============================================================================
+#     env = gym.make('CartPole-v0')
+# =============================================================================
     # TODO: Create the model.
     in_shape = env.observation_space.shape[0]
     
@@ -140,9 +149,9 @@ def main(args):
                     bias_initializer='zeros', 
                     activation='relu', 
                     input_shape=(in_shape,)))  # input: state and action
-#    model.add(Dense(16,kernel_initializer=initializers.VarianceScaling(scale=1.0,mode='fan_avg',distribution='uniform'),
-#                    bias_initializer='zeros',
-#                    activation='relu'))
+    model.add(Dense(16,kernel_initializer=initializers.VarianceScaling(scale=1.0,mode='fan_avg',distribution='uniform'),
+                    bias_initializer='zeros',
+                    activation='relu'))
     model.add(Dense(16,kernel_initializer=initializers.VarianceScaling(scale=1.0,mode='fan_avg',distribution='uniform'),
                     bias_initializer='zeros',
                     activation='relu'))

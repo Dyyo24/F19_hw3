@@ -39,13 +39,14 @@ class A2C(Reinforce):
         states, actions, rewards = self.generate_episode(env)
         print(states.shape)
         r = np.array(rewards)
-        V = np.zeros_like(r)
+        Vend = np.zeros_like(r)
         T = len(states)
+        all_V = self.critic_model.predict(states.reshape(1,-1)).squeeze()
         for i in range(T-2,-1,-1):
             if i+self.n >= T:
-                V[-1] = 0
+                Vend[i] = 0
             else:
-                V[i+self.n] = self.critic_model.predict(states.reshape(1,-1)).squeeze()
+                Vend[i] = all_V[i+self.n]
                 
         return
 
