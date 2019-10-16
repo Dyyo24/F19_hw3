@@ -102,7 +102,8 @@ class Reinforce(object):
             
         reward_mean = np.mean(np.array(reward))
         reward_std = np.std(np.array(reward))
-        return reward_mean, reward_std
+        reward_max = np.max(np.array(reward))
+        return reward_mean, reward_std, reward_max
     
     
 
@@ -166,17 +167,18 @@ def main(args):
     r = 0
     r_plot = []
     std_plot = []
-    while r < 200 or episode < 20000:
+    while r < 200 or episode < 50000:
         reinforce_model.train(env)
         episode += 1
         if episode % 200 == 0:
-            r, std = reinforce_model.test(env)
+            r, std, r_max = reinforce_model.test(env)
             r_plot.append(r)
             std_plot.append(std)
             print('------------------------')
             print('Episode: ',episode)
             print('Reward: ',r)
             print('Standard Deviation: ', std)
+            print('Maximum Reward: ', r_max)
 
 # train on batches, or do normalization of reward
     plt.errorbar(np.arange(1,len(r_plot)),r_plot,std_plot)
