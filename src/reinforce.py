@@ -85,7 +85,7 @@ class Reinforce(object):
     def test(self,env,gamma = 1):
         # Test the model 
         reward = []
-        for i in range(20):
+        for i in range(100):
             state = env.reset()
             done = False
             r_episode = 0
@@ -101,7 +101,8 @@ class Reinforce(object):
             reward.append(r_episode)
             
         reward_mean = np.mean(np.array(reward))
-        return reward_mean
+        reward_std = np.std(np.array(reward))
+        return reward_mean, reward_std
     
     
 
@@ -147,14 +148,14 @@ def main(args):
     model = Sequential()       # the model that is trained for Q value estimator (Q hat)
     model.add(Dense(16,kernel_initializer=initializers.VarianceScaling(scale=1.0,mode='fan_avg',distribution='uniform'),
                     bias_initializer='zeros', 
-                    activation='relu', 
+                    activation='tanh', 
                     input_shape=(in_shape,)))  # input: state and action
     model.add(Dense(16,kernel_initializer=initializers.VarianceScaling(scale=1.0,mode='fan_avg',distribution='uniform'),
                     bias_initializer='zeros',
-                    activation='relu'))
+                    activation='tanh'))
     model.add(Dense(16,kernel_initializer=initializers.VarianceScaling(scale=1.0,mode='fan_avg',distribution='uniform'),
                     bias_initializer='zeros',
-                    activation='relu'))
+                    activation='tanh'))
     model.add(Dense(4,kernel_initializer=initializers.VarianceScaling(scale=1.0,mode='fan_avg',distribution='uniform'),
                     bias_initializer='zeros', 
                     activation='softmax'))
@@ -163,17 +164,22 @@ def main(args):
     reinforce_model = Reinforce(model)
     episode = 0
     r = 0
-    while r < 200:
+    r_plot = []
+    std_plot = []
+    while r < 200 or episode < 20000:
         reinforce_model.train(env)
         episode += 1
         if episode % 200 == 0:
-            r = reinforce_model.test(env)
+            r, std = reinforce_model.test(env)
+            r_plot.append(r)
+            std_plot.append(std)
             print('------------------------')
             print('Episode: ',episode)
             print('Reward: ',r)
+            print('Standard Deviation: ', std)
 
 # train on batches, or do normalization of reward
-        
+    plt.errorbar(np.arange(1,len(r_plot)),r_plot,std_plot)
         
 
 if __name__ == '__main__':
