@@ -51,7 +51,7 @@ class A2C():
         advantage_hot_vect = torch.zeros([num,in_shape]).double()
         
         for i in range(num):
-            advantage_hot_vect[i,actions[i]] = (R-Vw)[i]
+            advantage_hot_vect[i,actions[i]] = (R-Vw)[i].detach()
 
         assert list(act_prob.size())[0] == num
         loss_list = advantage_hot_vect*self.scale_factor@torch.t(torch.log(act_prob)).double()
@@ -63,7 +63,7 @@ class A2C():
 
     def critic_loss(self,states,Rt):   # input numpy array of Rt and list of states
         # minimize critic loss
-        R = torch.from_numpy(Rt).double()
+        R = torch.from_numpy(Rt).double().detach()
         Vw = self.critic_model.forward(torch.Tensor(states)).double()
         num = Rt.shape[0]
         assert list((R-Vw).size())[0] == num    
@@ -190,23 +190,23 @@ def parse_arguments():
 
 
 
-class Model(nn.Module):
+class Model_actor(nn.Module):
 
     def __init__(self,in_shape,out_shape):
         
-        super(Model, self).__init__()
+        super(Model_actor, self).__init__()
         #self.h1 = nn.utils.weight_norm(nn.Linear(in_shape,16),name='weight')
-        self.h1 = nn.Linear(in_shape,20)
+        self.h1 = nn.Linear(in_shape,40)
         torch.nn.init.xavier_uniform_(self.h1.weight, gain=1/np.sqrt(2))
         self.h1.bias.data.fill_(0)
         
         #self.h2 = nn.utils.weight_norm(nn.Linear(16,16),name='weight')
-        self.h2 = nn.Linear(20,16)
+        self.h2 = nn.Linear(40,32)
         torch.nn.init.xavier_uniform_(self.h2.weight, gain=1/np.sqrt(2))
         self.h2.bias.data.fill_(0)
         
         #self.h3 = nn.utils.weight_norm(nn.Linear(16,16),name='weight')
-        self.h3 = nn.Linear(16,16)
+        self.h3 = nn.Linear(32,16)
         torch.nn.init.xavier_uniform_(self.h3.weight, gain=1/np.sqrt(2))
         self.h3.bias.data.fill_(0)
         
@@ -216,13 +216,47 @@ class Model(nn.Module):
         self.h4.bias.data.fill_(0)
     
     def forward(self,x):
-        x = F.relu(self.h1(x.float()))
+        x = F.tanh(self.h1(x.float()))
 
-        x = F.relu(self.h2(x))
+        x = F.tanh(self.h2(x))
         
-        x = F.relu(self.h3(x))
+        x = F.tanh(self.h3(x))
 
         y_pred = F.softmax(self.h4(x))
+        return y_pred
+
+class Model_critic(nn.Module):
+
+    def __init__(self,in_shape,out_shape):
+        
+        super(Model_critic, self).__init__()
+        #self.h1 = nn.utils.weight_norm(nn.Linear(in_shape,16),name='weight')
+        self.h1 = nn.Linear(in_shape,40)
+        torch.nn.init.xavier_uniform_(self.h1.weight, gain=1/np.sqrt(2))
+        self.h1.bias.data.fill_(0)
+        
+        #self.h2 = nn.utils.weight_norm(nn.Linear(16,16),name='weight')
+        self.h2 = nn.Linear(40,32)
+        torch.nn.init.xavier_uniform_(self.h2.weight, gain=1/np.sqrt(2))
+        self.h2.bias.data.fill_(0)
+        
+        #self.h3 = nn.utils.weight_norm(nn.Linear(16,16),name='weight')
+        self.h3 = nn.Linear(32,16)
+        torch.nn.init.xavier_uniform_(self.h3.weight, gain=1/np.sqrt(2))
+        self.h3.bias.data.fill_(0)
+        
+        #self.h4 = nn.utils.weight_norm(nn.Linear(16,out_shape),name='weight')
+        self.h4 = nn.Linear(16,out_shape)
+        torch.nn.init.xavier_uniform_(self.h4.weight, gain=1/np.sqrt(2))
+        self.h4.bias.data.fill_(0)
+    
+    def forward(self,x):
+        x = F.tanh(self.h1(x.float()))
+
+        x = F.tanh(self.h2(x))
+        
+        y_pred= F.tanh(self.h3(x))
+
         return y_pred
 
 
