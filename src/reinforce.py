@@ -166,7 +166,7 @@ def main(args):
     r = 0
     r_plot = []
     std_plot = []
-    while r < 200 and episode < 30000:
+    while episode < 20000:
         reinforce_model.train(env)
         episode += 1
         if episode % 200 == 0:
