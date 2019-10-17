@@ -2,10 +2,8 @@
 import argparse
 import numpy as np
 import tensorflow as tf
-import keras
 import gym
 
-import matplotlib
 #matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
@@ -40,13 +38,13 @@ class A2C():
     def policy_loss(self,states,actions,Rt):   # input list of Rt and states
         # maximize actor probabililty of advantage
         # track the gradient related to states
-        states = torch.Tensor(states)
-        act_prob = torch.autograd.Variable(self.model.forward(states), requires_grad = True)
+        states = torch.autograd.Variable(torch.Tensor(states), requires_grad = True)
+        act_prob = self.model.forward(states)
 
         Vw = self.critic_model.forward(torch.Tensor(states)).double().squeeze().detach()   # V(st)
-
+        
         R = torch.Tensor(Rt).double().detach()      
-        in_shape = list(act_prob.size())[1]
+        in_shape = list(act_prob.size())[1] # act_prob is n by actions space n
         
         num = len(Rt)
         advantage_hot_vect = torch.zeros([num,in_shape]).double()
@@ -59,26 +57,27 @@ class A2C():
             # normalize   
 
         assert list(act_prob.size())[0] == num
-        loss_list = advantage_hot_vect * torch.log(act_prob).double() # dim=[num,action_space_dim]
-        assert list(loss_list.size())[0] == num        
-        loss = torch.sum( -1*loss_list )/num # minus for maximum of the expression
         
-        print('---')
+        loss_list = torch.sum(advantage_hot_vect*torch.log(act_prob).double(),dim=1)
+        assert list(loss_list.size())[0] == num        
+        loss = torch.mean( -1*loss_list) # minus for maximum of the expression
+    
         print('Actor Reward',-1*loss.detach().item())
             
         return loss
 
     def critic_loss(self,states,Rt):   # input list of Rt and states
         # minimize critic prediction error
-        states = torch.Tensor(states)
+        states = torch.autograd.Variable(torch.Tensor(states), requires_grad = True)
         R = torch.Tensor(Rt).double().detach()
-        Vw = torch.autograd.Variable(self.critic_model.forward(states).double(), requires_grad = True)
+        Vw = self.critic_model.forward(states).double()
 
         num = len(Rt)
         assert list((R-Vw).size())[0] == num    
         loss = torch.mean( (R-Vw)*(R-Vw) )
     #    loss = torch.autograd.Variable(loss, requires_grad = True)
     #    print('Vw',torch.mean(Vw).detach().item())
+
         print('Critic Average Loss',loss.detach().item())
         return loss
 
@@ -103,8 +102,7 @@ class A2C():
             #calculate advantages for n steps
             for i in range(T-2,-1,-1):
                 if i + self.n < T:
-                    #Vend = self.critic_model.forward(torch.from_numpy(ss[i+self.n]))
-                    #Vend = Vend.item()
+
                     Vend = Vs[i+self.n].item()
                     assert type(Vend) == float
                     r_matrix = rr[i:i+self.n].copy()
@@ -113,6 +111,8 @@ class A2C():
                     
                 elif i + self.n >= T:
                     R[i] = R[i+1]*gamma + rr[i]
+                    
+                    
             states.extend(ss)
             actions.extend(aa)
             rewards.extend(rr)
@@ -133,7 +133,7 @@ class A2C():
 
         Loss_critic.backward()        
         optimizer2.step()
-      
+        
         
         
     def generate_episode(self, env, render=False):
@@ -268,11 +268,11 @@ class Model_critic(nn.Module):
         torch.nn.init.xavier_uniform_(self.h2.weight, gain=1/np.sqrt(2))
         
         #self.h3 = nn.utils.weight_norm(nn.Linear(16,16),name='weight')
-        self.h3 = nn.Linear(64,16,bias=False)
+        self.h3 = nn.Linear(64,32,bias=False)
         torch.nn.init.xavier_uniform_(self.h3.weight, gain=1/np.sqrt(2))
         
         #self.h4 = nn.utils.weight_norm(nn.Linear(16,out_shape),name='weight')
-        self.h4 = nn.Linear(16,out_shape,bias=False)
+        self.h4 = nn.Linear(32,out_shape,bias=False)
         torch.nn.init.xavier_uniform_(self.h4.weight, gain=1/np.sqrt(2))
 
     
@@ -289,62 +289,4 @@ class Model_critic(nn.Module):
 
 
 
-#def main(args):
-    # Parse command-line arguments.
-args = parse_arguments()
-num_episodes = 60000
-render = args.render
-lr = 9e-4
-critic_lr = 2e-4
-n = 50
 
-# Create the environment.
-env = gym.make('LunarLander-v2')
-#env = gym.make('CartPole-v0') 
-in_shape = env.reset().reshape((-1,1)).shape[0]
-out_shape =env.action_space.n
-
-policy = Model_actor(in_shape,out_shape)
-critic_model = Model_critic(in_shape,1)
-
-a2c_class = A2C(policy, lr, critic_model, critic_lr,n)
-
-r = 0
-iteration = 0
-error = []
-y = []
-x = []
-x0 = 1
-batch_size = 20; # how much more data episodes per training call
-episode_num = num_episodes/batch_size
-
-while iteration < episode_num:
-    a2c_class.train(env,batch_size)
-    if iteration % (200/batch_size) == 0:
-        r,r_list = a2c_class.test(env)
-        print('Reward: ',r)
-        stdev = np.std(r-r_list)
-        print('Deviation: ',stdev)
-        print('Iteration: ',iteration*batch_size)
-        error.append(stdev)
-        x0 += 1
-        y.append(r)
-        x.append(x0)
-        torch.save(policy.state_dict(), '../a2c_actor_model')
-        torch.save(critic_model.state_dict(), '../a2c_critic_model')        
-    iteration += 1
-plt.errorbar(x,y,error)     
-plt.savefig('reward_plot_a2c_N='+str(n)+'.png')  
-np.save('a2c_x_N='+str(n),x) 
-np.save('a2c_y_N='+str(n),y)
-np.save('a2c_error_N='+str(n),error)
-plt.show()
-
-#Load model
-#model = TheModelClass(in_shape,out_shape)
-#model.load_state_dict(torch.load(PATH))
-#model.eval()
-
-
-    #if __name__ == '__main__':
-#    main(sys.argv)
