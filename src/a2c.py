@@ -85,12 +85,14 @@ class A2C():
             states.extend(ss)
             actions.extend(aa)
             rewards.extend(rr)
-            
+
+        rewards = np.array(rewards.copy())*self.scale_factor # downscale reward to help init
         T = len(states)
         R = np.zeros((T,))
         R[-1] = rewards[-1]
         gamma_matrix = gamma**np.arange(self.n)
         
+        #calculate advantages for n steps
         for i in range(T-2,-1,-1):
             if i + self.n < T:
                 Vend = self.critic_model.forward(torch.from_numpy(states[i+self.n]))
@@ -101,8 +103,6 @@ class A2C():
                 
             elif i + self.n >= T:
                 R[i] = R[i+1]*gamma + rewards[i]
-        
-        R *= self.scale_factor # downscale rewards
         
         # gradient descent on policy actor 
         optimizer1 = optim.Adam(self.model.parameters(),lr = self.lr)
@@ -210,12 +210,12 @@ class Model_actor(nn.Module):
         
         super(Model_actor, self).__init__()
         #self.h1 = nn.utils.weight_norm(nn.Linear(in_shape,16),name='weight')
-        self.h1 = nn.Linear(in_shape,40)
+        self.h1 = nn.Linear(in_shape,56)
         torch.nn.init.xavier_uniform_(self.h1.weight, gain=1/np.sqrt(2))
         self.h1.bias.data.fill_(0)
         
         #self.h2 = nn.utils.weight_norm(nn.Linear(16,16),name='weight')
-        self.h2 = nn.Linear(40,32)
+        self.h2 = nn.Linear(56,32)
         torch.nn.init.xavier_uniform_(self.h2.weight, gain=1/np.sqrt(2))
         self.h2.bias.data.fill_(0)
         
@@ -246,12 +246,12 @@ class Model_critic(nn.Module):
         
         super(Model_critic, self).__init__()
         #self.h1 = nn.utils.weight_norm(nn.Linear(in_shape,16),name='weight')
-        self.h1 = nn.Linear(in_shape,40)
+        self.h1 = nn.Linear(in_shape,56)
         torch.nn.init.xavier_uniform_(self.h1.weight, gain=1/np.sqrt(2))
         self.h1.bias.data.fill_(0)
         
         #self.h2 = nn.utils.weight_norm(nn.Linear(16,16),name='weight')
-        self.h2 = nn.Linear(40,32)
+        self.h2 = nn.Linear(56,32)
         torch.nn.init.xavier_uniform_(self.h2.weight, gain=1/np.sqrt(2))
         self.h2.bias.data.fill_(0)
         
@@ -281,23 +281,22 @@ class Model_critic(nn.Module):
 #def main(args):
     # Parse command-line arguments.
 args = parse_arguments()
-num_episodes = args.num_episodes
-lr = 8e-4
-critic_lr = 2e-4
-n = args.n
+num_episodes = 60000
 render = args.render
+lr = 8e-4
+critic_lr = 1.5*1e-4
+n = 20
 
 # Create the environment.
 env = gym.make('LunarLander-v2')
 #env = gym.make('CartPole-v0') 
-# TODO: Create the model.
 in_shape = env.reset().reshape((-1,1)).shape[0]
 out_shape =env.action_space.n
 
 policy = Model_actor(in_shape,out_shape)
 critic_model = Model_critic(in_shape,1)
 
-a2c_class = A2C(policy, lr, critic_model, critic_lr,n=20)
+a2c_class = A2C(policy, lr, critic_model, critic_lr,n)
 
 r = 0
 iteration = 0
@@ -305,8 +304,8 @@ error = []
 y = []
 x = []
 x0 = 1
-batch_size = 10; # how much more data episodes per training call
-episode_num = 30000/batch_size
+batch_size = 50; # how much more data episodes per training call
+episode_num = num_episodes/batch_size
 
 while iteration < episode_num:
     a2c_class.train(env,batch_size)
@@ -324,10 +323,10 @@ while iteration < episode_num:
         torch.save(critic_model.state_dict(), '../critic_model')        
     iteration += 1
 plt.errorbar(x,y,error)     
-plt.savefig('reward_plot_a2c.png')  
-np.save('x',x) 
-np.save('y',y)
-np.save('error',error)
+plt.savefig('reward_plot_a2c_N='+str(n)+'.png')  
+np.save('x_N='+str(n),x) 
+np.save('y_N='+str(n),y)
+np.save('error_N='+str(n),error)
 plt.show()
 
 #Load model
