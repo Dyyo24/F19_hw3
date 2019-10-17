@@ -1,4 +1,4 @@
-import a2c.py
+import a2c
 import numpy as np
 import gym
 
