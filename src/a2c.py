@@ -38,14 +38,14 @@ class A2C():
         self.scale_factor = 1e-2
         
     def policy_loss(self,states,actions,Rt):   # input numpy array of Rt and list of states
-        
+        # maximize actor probabililty of advantage
+        # track the gradient related to states
         states = torch.autograd.Variable(torch.Tensor(states), requires_grad = True)
         act_prob = self.model.forward(states)
 
         Vw = self.critic_model.forward(torch.Tensor(states)).double().squeeze().detach()   # V(st)
 
-        R = torch.from_numpy(Rt).double().detach()
-        #print('R',R.size())        
+        R = torch.from_numpy(Rt).double().detach()      
         in_shape = list(act_prob.size())[1]
         
         num = Rt.shape[0]
@@ -59,12 +59,11 @@ class A2C():
         loss_list = advantage_hot_vect@torch.t(torch.log(act_prob)).double()
         assert list(loss_list.size())[0] == num        
         loss = torch.mean( -1*loss_list) # minus for maximum of the expression
-        # maximize actor probabililty
-     #   loss = torch.autograd.Variable(loss, requires_grad = True)
+
         return loss
 
     def critic_loss(self,states,Rt):   # input numpy array of Rt and list of states
-        # minimize critic loss
+        # minimize critic prediction error
         states = torch.autograd.Variable(torch.Tensor(states), requires_grad = True)
         R = torch.from_numpy(Rt).double().detach()
         Vw = self.critic_model.forward(states).double()
@@ -72,14 +71,16 @@ class A2C():
         num = Rt.shape[0]
         assert list((R-Vw).size())[0] == num    
         loss = torch.mean( (R-Vw)*(R-Vw) )
-#        loss = torch.autograd.Variable(loss, requires_grad = True)
+
         return loss
 
     def train(self, env, batch_size, gamma=0.99):
         # Trains the model on a single episode using A2C.
         
-        states, actions, rewards = self.generate_episode(env)
-        for i in range(5):
+        states=[]
+        actions=[]
+        rewards = []
+        for i in range(batch_size):
             ss,aa,rr = self.generate_episode(env)
             states.extend(ss)
             actions.extend(aa)
@@ -300,29 +301,39 @@ a2c_class = A2C(policy, lr, critic_model, critic_lr,n=20)
 
 r = 0
 iteration = 0
-episode_num = 40000
 error = []
 y = []
 x = []
 x0 = 1
-batch_size = 19; # how much more data episodes per training call
+batch_size = 10; # how much more data episodes per training call
+episode_num = 30000/batch_size
 
 while iteration < episode_num:
     a2c_class.train(env,batch_size)
-    if iteration % 200 == 0:
+    if iteration % (200/batch_size) == 0:
         r,r_list = a2c_class.test(env)
         print('Reward: ',r)
         stdev = np.std(r-r_list)
         print('Deviation: ',stdev)
-        print('Iteration: ',iteration)
+        print('Iteration: ',iteration*batch_size)
         error.append(stdev)
         x0 += 1
         y.append(r)
         x.append(x0)
+        torch.save(policy.state_dict(), '../actor_model')
+        torch.save(critic_model.state_dict(), '../critic_model')        
     iteration += 1
 plt.errorbar(x,y,error)     
-plt.savefig('reward_plot_a2c.png')   
+plt.savefig('reward_plot_a2c.png')  
+np.save('x',x) 
+np.save('y',y)
+np.save('error',error)
 plt.show()
+
+#Load model
+#model = TheModelClass(in_shape,out_shape)
+#model.load_state_dict(torch.load(PATH))
+#model.eval()
 
 
     #if __name__ == '__main__':
