@@ -59,9 +59,9 @@ class A2C():
             # normalize   
 
         assert list(act_prob.size())[0] == num
-        loss_list = advantage_hot_vect@torch.t(torch.log(act_prob)).double()
+        loss_list = advantage_hot_vect * torch.log(act_prob).double() # dim=[num,action_space_dim]
         assert list(loss_list.size())[0] == num        
-        loss = torch.mean( -1*loss_list) # minus for maximum of the expression
+        loss = torch.sum( -1*loss_list )/num # minus for maximum of the expression
         
         print('---')
         print('Actor Reward',-1*loss.detach().item())
