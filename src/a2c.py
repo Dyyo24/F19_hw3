@@ -39,42 +39,52 @@ class A2C():
         
     def policy_loss(self,states,actions,Rt):   # input numpy array of Rt and list of states
         
-        
-        act_prob = self.model.forward(torch.Tensor(states))
-        Vw = self.critic_model.forward(torch.Tensor(states)).double().squeeze()   # V(st)
+        states = torch.autograd.Variable(torch.Tensor(states), requires_grad = True)
+        act_prob = self.model.forward(states)
 
-        R = torch.from_numpy(Rt).double()
+        Vw = self.critic_model.forward(torch.Tensor(states)).double().squeeze().detach()   # V(st)
+
+        R = torch.from_numpy(Rt).double().detach()
         #print('R',R.size())        
         in_shape = list(act_prob.size())[1]
         
         num = Rt.shape[0]
         advantage_hot_vect = torch.zeros([num,in_shape]).double()
         
+        assert len(actions) == num
         for i in range(num):
-            advantage_hot_vect[i,actions[i]] = (R-Vw)[i].detach()
+            advantage_hot_vect[i,actions[i]] = (R-Vw)[i]
 
         assert list(act_prob.size())[0] == num
-        loss_list = advantage_hot_vect*self.scale_factor@torch.t(torch.log(act_prob)).double()
+        loss_list = advantage_hot_vect@torch.t(torch.log(act_prob)).double()
         assert list(loss_list.size())[0] == num        
-        loss = -1*torch.mean( loss_list) # minus for maximum of the expression
+        loss = torch.mean( -1*loss_list) # minus for maximum of the expression
         # maximize actor probabililty
-        loss = torch.autograd.Variable(loss, requires_grad = True)
+     #   loss = torch.autograd.Variable(loss, requires_grad = True)
         return loss
 
     def critic_loss(self,states,Rt):   # input numpy array of Rt and list of states
         # minimize critic loss
+        states = torch.autograd.Variable(torch.Tensor(states), requires_grad = True)
         R = torch.from_numpy(Rt).double().detach()
-        Vw = self.critic_model.forward(torch.Tensor(states)).double()
+        Vw = self.critic_model.forward(states).double()
+
         num = Rt.shape[0]
         assert list((R-Vw).size())[0] == num    
-        loss = torch.mean( ((R-Vw)*self.scale_factor)**2 )
-        loss = torch.autograd.Variable(loss, requires_grad = True)
+        loss = torch.mean( (R-Vw)*(R-Vw) )
+#        loss = torch.autograd.Variable(loss, requires_grad = True)
         return loss
 
-    def train(self, env, gamma=0.99):
+    def train(self, env, batch_size, gamma=0.99):
         # Trains the model on a single episode using A2C.
         
-        states, actions, rewards = self.generate_episode(env)        
+        states, actions, rewards = self.generate_episode(env)
+        for i in range(5):
+            ss,aa,rr = self.generate_episode(env)
+            states.extend(ss)
+            actions.extend(aa)
+            rewards.extend(rr)
+            
         T = len(states)
         R = np.zeros((T,))
         R[-1] = rewards[-1]
@@ -91,19 +101,23 @@ class A2C():
             elif i + self.n >= T:
                 R[i] = R[i+1]*gamma + rewards[i]
         
+        R *= self.scale_factor # downscale rewards
+        
         # gradient descent on policy actor 
         optimizer1 = optim.Adam(self.model.parameters(),lr = self.lr)
-        Loss_policy = self.policy_loss(states,actions,R)
+        optimizer1.zero_grad() 
+        Loss_policy = self.policy_loss(states,actions,R) 
         Loss_policy.backward()
         optimizer1.step()
-        optimizer1.zero_grad()
+
         
         # gradient descent on critic
         optimizer2 = optim.Adam(self.critic_model.parameters(),lr = self.critic_lr)
+        optimizer2.zero_grad() 
         Loss_critic = self.critic_loss(states,R)
         Loss_critic.backward()        
         optimizer2.step()
-        optimizer2.zero_grad()       
+      
         
         
     def generate_episode(self, env, render=False):
@@ -121,10 +135,10 @@ class A2C():
         while not done:
             act_probs = self.model.forward(torch.from_numpy(state)) # evaluate policy
             act_probs = act_probs.detach().numpy().squeeze()
-            
-            act = np.random.choice(np.arange(act_probs.shape[0]), p = act_probs)
+            act = np.random.choice(np.arange(env.action_space.n), p = act_probs)
             states.append(state)
             actions.append(act)
+            
             next_state,r,done,_ = env.step(act)
             state = next_state.copy()
             rewards.append(r)
@@ -144,10 +158,10 @@ class A2C():
             while done == False:
                 # Take action and observe
                 act_probs = self.model.forward(torch.from_numpy(state)) # evaluate policy
-                #act = np.argmax(act_probs.detach().numpy())
+
                 act_probs = act_probs.detach().numpy()
                 act = np.random.choice(np.arange(act_probs.shape[0]), p = act_probs)
-                
+                #act = np.argmax(act_probs.detach().numpy())                
                 next_state,r,done,_ = env.step(act)
                 state = next_state.copy()
                 r_episode += r
@@ -221,7 +235,8 @@ class Model_actor(nn.Module):
         
         x = F.tanh(self.h3(x))
 
-        y_pred = F.softmax(self.h4(x))
+        y_pred = F.softmax(self.h4(x),dim=-1)
+
         return y_pred
 
 class Model_critic(nn.Module):
@@ -266,8 +281,8 @@ class Model_critic(nn.Module):
     # Parse command-line arguments.
 args = parse_arguments()
 num_episodes = args.num_episodes
-lr = args.lr
-critic_lr = args.critic_lr
+lr = 8e-4
+critic_lr = 2e-4
 n = args.n
 render = args.render
 
@@ -281,27 +296,32 @@ out_shape =env.action_space.n
 policy = Model_actor(in_shape,out_shape)
 critic_model = Model_critic(in_shape,1)
 
-a2c_class = A2C(policy, lr, critic_model, critic_lr)
+a2c_class = A2C(policy, lr, critic_model, critic_lr,n=20)
 
 r = 0
 iteration = 0
-episode_num = 10000
+episode_num = 40000
 error = []
 y = []
 x = []
 x0 = 1
+batch_size = 19; # how much more data episodes per training call
+
 while iteration < episode_num:
-    a2c_class.train(env)
+    a2c_class.train(env,batch_size)
     if iteration % 200 == 0:
         r,r_list = a2c_class.test(env)
         print('Reward: ',r)
+        stdev = np.std(r-r_list)
+        print('Deviation: ',stdev)
         print('Iteration: ',iteration)
-        error.append(np.max(r-r_list))
+        error.append(stdev)
         x0 += 1
         y.append(r)
         x.append(x0)
     iteration += 1
-plt.errorbar(x,y,error)        
+plt.errorbar(x,y,error)     
+plt.savefig('reward_plot_a2c.png')   
 plt.show()
 
 
