@@ -77,7 +77,6 @@ class A2C():
         states, actions, rewards = self.generate_episode(env)        
         T = len(states)
         R = np.zeros((T,))
-        Vend = 0
         R[-1] = rewards[-1]
         gamma_matrix = gamma**np.arange(self.n)
         
@@ -255,7 +254,9 @@ class Model_critic(nn.Module):
 
         x = F.tanh(self.h2(x))
         
-        y_pred= F.tanh(self.h3(x))
+        x = F.tanh(self.h3(x))
+        
+        y_pred = self.h4(x)
 
         return y_pred
 
@@ -277,14 +278,14 @@ env = gym.make('LunarLander-v2')
 in_shape = env.reset().reshape((-1,1)).shape[0]
 out_shape =env.action_space.n
 
-policy = Model(in_shape,out_shape)
-critic_model = Model(in_shape,1)
+policy = Model_actor(in_shape,out_shape)
+critic_model = Model_critic(in_shape,1)
 
 a2c_class = A2C(policy, lr, critic_model, critic_lr)
 
 r = 0
 iteration = 0
-episode_num = 5000
+episode_num = 10000
 error = []
 y = []
 x = []
