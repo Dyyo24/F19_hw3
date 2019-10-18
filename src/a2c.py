@@ -294,11 +294,11 @@ class Model_critic(nn.Module):
 #def main(args):
     # Parse command-line arguments.
 args = parse_arguments()
-num_episodes = 30000
+num_episodes = 20000
 render = args.render
 lr = 7e-4
 critic_lr = 2e-4
-n = 50
+n = 1
 
 # Create the environment.
 env = gym.make('LunarLander-v2')

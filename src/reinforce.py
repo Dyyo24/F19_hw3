@@ -25,7 +25,7 @@ import matplotlib.pyplot as plt
 class Reinforce(object):
     # Implementation of the policy gradient method REINFORCE.
 
-    def __init__(self, model, lr=3e-4):
+    def __init__(self, model, lr=1e-4):
         # TODO: Define any training operations and optimizers here, initialize
         #       your variables, or alternately compile your model here.
         self.model = model
@@ -146,14 +146,14 @@ def main(args):
     
     
     model = Sequential()       # the model that is trained for Q value estimator (Q hat)
-    model.add(Dense(16,kernel_initializer=initializers.VarianceScaling(scale=1.0,mode='fan_avg',distribution='uniform'),
+    model.add(Dense(32,kernel_initializer=initializers.VarianceScaling(scale=1.0,mode='fan_avg',distribution='uniform'),
                     bias_initializer='zeros', 
                     activation='tanh', 
                     input_shape=(in_shape,)))  # input: state and action
-    model.add(Dense(32,kernel_initializer=initializers.VarianceScaling(scale=1.0,mode='fan_avg',distribution='uniform'),
+    model.add(Dense(64,kernel_initializer=initializers.VarianceScaling(scale=1.0,mode='fan_avg',distribution='uniform'),
                     bias_initializer='zeros',
                     activation='tanh'))
-    model.add(Dense(16,kernel_initializer=initializers.VarianceScaling(scale=1.0,mode='fan_avg',distribution='uniform'),
+    model.add(Dense(32,kernel_initializer=initializers.VarianceScaling(scale=1.0,mode='fan_avg',distribution='uniform'),
                     bias_initializer='zeros',
                     activation='tanh'))
     model.add(Dense(4,kernel_initializer=initializers.VarianceScaling(scale=1.0,mode='fan_avg',distribution='uniform'),
@@ -166,7 +166,7 @@ def main(args):
     r = 0
     r_plot = []
     std_plot = []
-    while episode < 20000:
+    while episode < 15000:
         reinforce_model.train(env)
         episode += 1
         if episode % 200 == 0:
